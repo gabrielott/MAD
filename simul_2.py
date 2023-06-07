@@ -33,15 +33,25 @@ def run():
     inv_lambda = float(sys.argv[1])
     inv_mi = float(sys.argv[2])
 
+    FULL = 3
+    EMPTY = 0
+
     n = 0
-    events = [E(ARRIVAL, randexp(inv_lambda))]
+    events = []
+
+    for _ in range(FULL + 1):
+        events.append(E(ARRIVAL, 0))
+
     clients = []
     clients_index = 0
     sum_client_average = 0
     last_t = 0
     graph_data = []
 
-    for _ in range(40):
+    last_full = None
+    full_intervals = []
+
+    for _ in range(400):
         e = events.pop()
         graph_data.append((last_t, n))
         graph_data.append((e.t, n))
@@ -56,12 +66,21 @@ def run():
                 clients_index += 1
                 append_sort(events, E(DEPARTURE, e.t + randexp(inv_mi)))
 
+            if last_full is None and n == FULL:
+                print(f"comecou a contar {n}")
+                last_full = e.t
+
         elif e.k == DEPARTURE:
             n -= 1
             if n > 0:
                 clients[clients_index].s = e.t
                 clients_index += 1
                 append_sort(events, E(DEPARTURE, e.t + randexp(inv_mi)))
+
+            if last_full is not None and n == EMPTY:
+                print(f"parou de contar {n}")
+                full_intervals.append(e.t - last_full)
+                last_full = None
 
         last_t = e.t
 
@@ -71,15 +90,23 @@ def run():
     filtered_clients = filter(lambda x: x.s is not None, clients)
     average_wait = reduce(lambda total, x: total + (x.s - x.a), filtered_clients, 0) / len(clients)
     average_clients = sum_client_average / e.t
+    average_full = sum(full_intervals) / len(full_intervals)
     print(f"Média tempo de espera: {average_wait}")
     print(f"Média clientes no sistema: {average_clients}")
+    print(f"Média cheio {average_full}")
 
     with open("saida.csv", "w") as f:
         for d in graph_data:
             f.write(str(d)[1:-1] + "\n")
 
 def main():
-    run()
+    while True:
+        try:
+            print("comecou")
+            run()
+            break
+        except ZeroDivisionError:
+            pass
 
 if __name__ == "__main__":
     main()
